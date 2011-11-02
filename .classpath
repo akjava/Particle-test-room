@@ -5,5 +5,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/threeTest"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/stats-gwt"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/html5gwt"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
