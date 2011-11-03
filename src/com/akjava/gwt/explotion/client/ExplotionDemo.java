@@ -2,7 +2,9 @@ package com.akjava.gwt.explotion.client;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.akjava.gwt.explotion.client.particle.Explotion;
 import com.akjava.gwt.explotion.client.particle.Galaxy;
@@ -14,6 +16,7 @@ import com.akjava.gwt.html5.client.HTML5InputRange;
 import com.akjava.gwt.three.client.THREE;
 import com.akjava.gwt.three.client.cameras.Camera;
 import com.akjava.gwt.three.client.extras.ImageUtils;
+import com.akjava.gwt.three.client.gwt.BlendingValue;
 import com.akjava.gwt.three.client.gwt.BlendingValueList;
 import com.akjava.gwt.three.client.lights.Light;
 import com.akjava.gwt.three.client.materials.Material;
@@ -27,14 +30,18 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.LoadEvent;
 import com.google.gwt.event.dom.client.LoadHandler;
+import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.text.shared.Renderer;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
@@ -89,7 +96,7 @@ public class ExplotionDemo extends AbstractDemo {
 		
 		
 		Texture texture=ImageUtils.loadTexture(textureUrl);
-		
+		//TODO fix some problem.
 		for (int i = 0; i < parameters.length && i<maxLayer; i++ ) {
 			
 			//int size  = parameters[i].size;
@@ -100,14 +107,14 @@ public class ExplotionDemo extends AbstractDemo {
 
 			ParticleBasicMaterialBuilder builder=THREE.ParticleBasicMaterial().size(size);
 			builder.blending(blending);
-			builder.color(color);
+			builder.color(foreground);
 			
 			if(useTexture){
 				builder.map(texture);
 				builder.transparent(useTransparent);
 			}
 			
-			//TODO layer support
+
 			materials[i] = builder.build();
 			if(randomColor){
 			materials[i].getColor().setHSV( parameters[i].h, parameters[i].s, parameters[i].v );
@@ -205,7 +212,12 @@ public class ExplotionDemo extends AbstractDemo {
 		}
 		
 		}
+		camera.getPosition().incrementX((mouseX - camera.getPosition().getX() ) * 0.05);
+		camera.getPosition().incrementY((-mouseY - camera.getPosition().getY() ) * 0.05);
 		
+		
+		//camera.getPosition().setX(mouseX);
+		//camera.getPosition().setY(mouseY);
 		camera.getPosition().setZ(cameraZ);
 		renderer.render(scene, camera);
 		this.scene=scene;
@@ -263,11 +275,11 @@ public class ExplotionDemo extends AbstractDemo {
 	private int particleCount=4000;
 	private Light light;
 
-	private boolean sortParticle;
+	private boolean sortParticle=true;//better on large particle
 	private Light light2;
 	
 	private int blending;
-	private int color;
+	private int foreground=0xffffff;
 	private int background;
 	private String textureUrl;
 
@@ -322,11 +334,54 @@ public class ExplotionDemo extends AbstractDemo {
 	}
 	@Override
 	public void createControl(Panel parent) {
+		
+		HorizontalPanel hp=new HorizontalPanel();
+		parent.add(hp);
+		Button update=new Button("Update Particles");
+		update.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				updateParticles();
+			}
+		});
+		hp.add(update);
+		
+		
+		Button share=new Button("Share");
+		share.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				updateParticles();
+				shareUrl();
+			}
+		});
+		hp.add(share);
+		
+		Token token=new Token();
+		background=token.getHexInt("bg", background);
+		particleSize=token.getInt("psize", particleSize);
+		particleCount=token.getInt("pcount", particleCount);
+		sortParticle=token.getBoolean("sort", sortParticle);
+		useTransparent=token.getBoolean("transparent", useTransparent);
+		blending=token.getInt("blend", blending);
+		randomColor=token.getBoolean("randam", randomColor);
+		foreground=token.getHexInt("fg", foreground);
+		String imageName=token.getString("texture", null);
+		if(imageName!=null){
+			useTexture=true;
+		}
+		density=token.getInt("density", density);
+		String motionName=token.getString("motion", null);
+		showPlane=token.getBoolean("plane", showPlane);
+		
+		
 		parent.setWidth("164px");
 		
 		parent.add(createTitleLabel("Background"));
 		backgroundColor = new ColorPickWidget();
-		backgroundColor.setColor(background);
+		backgroundColor.setValue(background);
 		parent.add(backgroundColor);
 		
 		
@@ -351,7 +406,7 @@ public class ExplotionDemo extends AbstractDemo {
 		
 		
 		sortParticleCheck = new CheckBox("Particle.sortParticles");
-		
+		sortParticleCheck.setValue(sortParticle);
 		parent.add(sortParticleCheck);
 		
 useTransparentCheck = new CheckBox("use transparent");
@@ -360,6 +415,12 @@ useTransparentCheck.setValue(useTransparent);
 		
 		parent.add(createTitleLabel("Blending"));
 		blendingList = new BlendingValueList();
+		
+		if(!BlendingValue.isvalid(blending)){
+			blending=0;
+		}
+		
+		blendingList.setValue(BlendingValue.values.get(blending));
 		parent.add(blendingList);
 		
 		parent.add(createTitleLabel("Foreground"));
@@ -367,7 +428,8 @@ useTransparentCheck.setValue(useTransparent);
 		changeColorCheck.setValue(randomColor);
 		parent.add(changeColorCheck);
 		baseColor = new ColorPickWidget();
-		baseColor.setVisible(false);
+		baseColor.setValue(foreground);
+		baseColor.setVisible(!randomColor);
 		parent.add(baseColor);
 		changeColorCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 
@@ -383,12 +445,13 @@ useTransparentCheck.setValue(useTransparent);
 		parent.add(textureCheck);
 		images = new SelectionFlowPanel<Image>("selection");
 		images.getElement().getStyle().setBackgroundColor("#888");
-		String[] imgs={"candle.png","particle1.png","particle2.png","particle4.png","particle7.png","sword.png",
+		String[] imgs={"particle3.png","particle5.png","particle6.png","candle.png","particle1.png","particle2.png","particle4.png","particle7.png","sword.png",
 				"box.png","spark2.png",
 				"book.png","clock.png","crystal.png",
 				"cup.png","dish.png","ribbon.png",
-				"shield.png","vegitable.png","particle8.png","particle9.png","particle10.png","particle11.png","particle3.png","particle5.png","particle6.png"
+				"shield.png","vegitable.png","particle8.png","particle9.png","particle11.png","star2.png","shoot.png"
 		};
+		
 		for(int i=0;i<imgs.length;i++){
 			Image img=new Image("img/"+imgs[i]);
 			images.add(img);
@@ -402,7 +465,14 @@ useTransparentCheck.setValue(useTransparent);
 				});
 			}
 		}
-		images.select(0);
+		int findIndex=0;
+		for(int i=0;i<imgs.length;i++){
+			if(imgs[i].equals(imageName)){
+				findIndex=i;
+				break;
+			}
+		}
+		images.select(findIndex);
 		parent.add(images);
 		textureCheck.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
 			
@@ -419,7 +489,7 @@ useTransparentCheck.setValue(useTransparent);
 		
 		
 		parent.add(createTitleLabel("Motion"));
-		List<ParticleControler> particles=Arrays.asList(new Rotation(),new Rain(),new Galaxy(),new Explotion());
+		List<ParticleControler> particles=Arrays.asList(new Rain(),new Galaxy(),new Explotion(),new Rotation());
 		
 		particleControlers = new ValueListBox<ParticleControler>(new Renderer<ParticleControler>() {
 			@Override
@@ -432,26 +502,63 @@ useTransparentCheck.setValue(useTransparent);
 					throws IOException {
 			}
 		});
-		particleControlers.setValue(particles.get(0));
+		int motionIndex=0;
+		for(int i=0;i<particles.size();i++){
+			if(particles.get(i).getName().equals(motionName)){
+				motionIndex=i;
+				break;
+			}
+		}
+		particleControlers.setValue(particles.get(motionIndex));
 		particleControlers.setAcceptableValues(particles);
 		parent.add(particleControlers);
 		
-		showPlaneCheck = new CheckBox("showPlane");
+		showPlaneCheck = new CheckBox("Show Plane-Geometry");
 		showPlaneCheck.setValue(showPlane);
 		parent.add(showPlaneCheck);
 		
 		
-		Button update=new Button("Update Particles");
-		update.addClickHandler(new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-				updateParticles();
-			}
-		});
-		parent.add(update);
+		
+		
+		
+		
 		
 		showControl();
+	}
+	private void shareUrl(){
+		Map<String,String> map=new HashMap<String,String>();
+		map.put("bg",toHexColor(background));
+		map.put("psize", ""+particleSize);
+		map.put("pcount", ""+particleCount);
+		map.put("sort", ""+sortParticle);
+		map.put("transparent", ""+useTransparent);
+		
+		
+		BlendingValue bv=blendingList.getValue();
+		
+		
+		map.put("blend", ""+bv.getValue());
+		map.put("randam", ""+randomColor);
+		map.put("fg", ""+toHexColor(foreground));
+		
+		if(useTexture){
+		String imgName=textureUrl;
+		int ind=imgName.lastIndexOf("/");
+		imgName=imgName.substring(ind+1);
+		map.put("texture", ""+imgName);
+		}
+		map.put("density", ""+density);
+		map.put("motion", ""+particleControler.getName());
+		map.put("plane", ""+showPlane);
+		
+		History.newItem(Token.createToken(map));
+	}
+	private String toHexColor(int value){
+		String ret=Integer.toHexString(value);
+		while(ret.length()<6){
+			ret="0"+ret;
+		}
+		return ret;
 	}
 	private void updateParticles(){
 		useTexture=textureCheck.getValue();
@@ -464,15 +571,23 @@ useTransparentCheck.setValue(useTransparent);
 		blending=blendingList.getValue().getValue();
 		sortParticle=sortParticleCheck.getValue();
 		useTransparent=useTransparentCheck.getValue();
-		color=baseColor.getColor();
-		background=backgroundColor.getColor();
+		foreground=baseColor.getValue();
+		background=backgroundColor.getValue();
 		textureUrl=images.getSelection().getUrl();
 		particleControler=particleControlers.getValue();
 		showPlane=showPlaneCheck.getValue();
 	}
 	@Override
 	public String getHtml(){
-		return "Particle Test Room by Aki "+super.getHtml()+" ,assets from <a href='http://opengameart.org/'>opengameart.org</a>";
+		return "Particle Test Room for Chrome by <a href='http://www.akjava.com'>Aki</a> "+super.getHtml()+" ,assets from <a href='http://opengameart.org/'>opengameart.org</a>";
+	}
+
+	private int mouseX;
+	private int mouseY;
+	@Override
+	public void onMouseMove(MouseMoveEvent event) {
+		mouseX=event.getX()-width/2;
+		mouseY=event.getY()-height/2;
 	}
 	
 	

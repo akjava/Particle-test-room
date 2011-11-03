@@ -8,6 +8,8 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
@@ -15,7 +17,6 @@ import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.FocusPanel;
 import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -56,6 +57,7 @@ public abstract class AbstractDemo implements EntryPoint {
 		return canvas;
 	}
 	public abstract void onMouseWheel(MouseWheelEvent event);
+	public abstract void onMouseMove(MouseMoveEvent event) ;
 	public abstract void update(WebGLRenderer renderer);
 	public abstract void initialize(WebGLRenderer renderer,int width,int height);
 	public abstract void resized(int width,int height);
@@ -89,6 +91,12 @@ public abstract class AbstractDemo implements EntryPoint {
 				//TODO
 			}
 		});
+		canvas.addMouseMoveHandler(new MouseMoveHandler(){
+
+			@Override
+			public void onMouseMove(MouseMoveEvent event) {
+				AbstractDemo.this.onMouseMove(event);
+			}});
 		
 		//canvas.setStyleName("clear");
 		//glCanvas.getElement().getStyle().setBackgroundColor("#fff");
@@ -126,7 +134,7 @@ public abstract class AbstractDemo implements EntryPoint {
 		dialogRoot.add(label);
 		main = new VerticalPanel();
 		main.setVisible(false);
-		dialogRoot.add(main);
+		
 		
 		HorizontalPanel hPanel=new HorizontalPanel();
 		hPanel.setWidth("100%");
@@ -145,6 +153,9 @@ public abstract class AbstractDemo implements EntryPoint {
 			}
 		});
 		hPanel.add(hide);
+		
+		dialogRoot.add(main);
+		
 		label.addClickHandler(new ClickHandler() {
 			
 			@Override
@@ -196,6 +207,6 @@ public abstract class AbstractDemo implements EntryPoint {
 		int h=Window.getScrollTop();
 		int dw=dialog.getOffsetWidth();
 		GWT.log(w+"x"+h+" offset="+dialog.getOffsetWidth());
-		dialog.setPopupPosition(w-dw, h);
+		dialog.setPopupPosition(w-dw-18, h);
 	}
 }
